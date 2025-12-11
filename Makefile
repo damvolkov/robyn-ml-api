@@ -85,8 +85,8 @@ endif
 	@echo "$(GREEN)=== Setup complete ===$(RESET)"
 
 sync:
-	@echo "$(GREEN)=== Syncing dependencies (frozen) ===$(RESET)"
-	@uv sync --frozen
+	@echo "$(GREEN)=== Syncing dependencies ===$(RESET)"
+	@uv sync --dev
 	@echo "$(GREEN)=== Sync complete ===$(RESET)"
 
 lock:

@@ -21,4 +21,3 @@ class HealthResponse(BaseModel):
 async def health_check() -> HealthResponse:
     logger.info("Health check requested", icon=LogIcon.HEALTHCHECK)
     return HealthResponse(status="healthy", service=st.API_NAME, version=st.API_VERSION)
-

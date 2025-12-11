@@ -208,4 +208,3 @@ class TestParseResponse:
         """Verify parse_response always returns a Response."""
         result = parse_response(input_val)
         assert isinstance(result, expected_type)
-

@@ -1,2 +1,0 @@
-"""Events unit tests package."""
-

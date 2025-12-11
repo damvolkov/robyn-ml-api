@@ -1,2 +1,0 @@
-"""Lifespan events package."""
-

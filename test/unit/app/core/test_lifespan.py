@@ -231,4 +231,3 @@ class TestLifespan:
         lifespan = Lifespan(mock_app)
         # Should not raise
         await lifespan.shutdown()
-

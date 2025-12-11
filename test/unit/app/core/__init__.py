@@ -1,2 +1,0 @@
-"""Core unit tests package."""
-

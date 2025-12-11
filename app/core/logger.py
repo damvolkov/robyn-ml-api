@@ -16,6 +16,7 @@ class LoggerError(Exception):
 
 class LogLevel(StrEnum):
     """LogLevel types for logger configuration."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -93,6 +94,7 @@ class LogIcon(StrEnum):
 @dataclass
 class LoggerConfig:
     """Logger configuration with debug-specific settings."""
+
     debug: bool = field(default_factory=lambda: settings.DEBUG)
     app_name: str = field(default="irius")
     log_level: LogLevel = field(default=LogLevel.INFO)
@@ -150,9 +152,7 @@ def dev_pipeline_renderer(logger, name: str, event_dict: dict) -> str:
 
     location = f"{filename}:{lineno}" if filename else ""
 
-    extra_kwargs = " | ".join(
-        f"{k}={v}" for k, v in event_dict.items() if k not in reserved_keys
-    )
+    extra_kwargs = " | ".join(f"{k}={v}" for k, v in event_dict.items() if k not in reserved_keys)
 
     parts = [timestamp, level, event, extra_kwargs, location]
     return " | ".join(filter(None, parts))
@@ -169,7 +169,7 @@ def setup_logging(config: LoggerConfig) -> None:
                 structlog.processors.CallsiteParameter.FILENAME,
                 structlog.processors.CallsiteParameter.LINENO,
             ],
-            additional_ignores=["logger"]
+            additional_ignores=["logger"],
         ),
         BusinessRulesProcessor(debug=config.debug),
     ]
@@ -197,4 +197,3 @@ setup_logging(_default_config)
 
 # Create logger instance ready to use
 logger = structlog.get_logger()
-
