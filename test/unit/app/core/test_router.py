@@ -6,8 +6,8 @@ import pytest
 from pydantic import BaseModel
 from robyn import Response
 
-from app.core.router import BodyType, parse_endpoint_signature, parse_request_body, parse_response
-from app.models.core import UploadFile
+from app.core.router import parse_endpoint_signature, parse_request_body, parse_response
+from app.models.core import BodyType, UploadFile
 
 
 # -----------------------------------------------------------------------------
