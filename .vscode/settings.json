@@ -11,5 +11,10 @@
     "python.analysis.extraPaths": [
         "./app"
     ],
-    "postman.settings.dotenv-detection-notification-visibility": false
+    "postman.settings.dotenv-detection-notification-visibility": false,
+    "cursorpyright.analysis.autoImportCompletions": true,
+    "cursorpyright.analysis.extraPaths": [
+        "./app"
+    ],
+    "cursorpyright.analysis.typeCheckingMode": "basic"
 }

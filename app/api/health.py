@@ -6,7 +6,7 @@ from app.core.logger import LogIcon, logger
 from app.core.router import Router
 from app.core.settings import settings as st
 
-router = Router(__file__, prefix="/")
+router = Router(__file__)
 
 
 class HealthResponse(BaseModel):

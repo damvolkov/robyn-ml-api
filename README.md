@@ -7,6 +7,8 @@ A modern, fast, and type-safe foundation for building Machine Learning APIs with
 ## Features
 
 - **Custom Router** - Automatic body parsing, Pydantic validation, and response serialization
+- **File Uploads** - Typed `UploadFile` with automatic request injection (no explicit `request` param needed)
+- **Middleware System** - Abstract `BaseMiddleware` with before/after hooks and endpoint filtering
 - **Event-driven Lifespan** - Clean startup/shutdown lifecycle for ML models, pools, and connections
 - **Strong Typing** - Full type hints with Pydantic models for request/response validation
 - **Structured Logging** - Debug-aware logging with structlog and correlation IDs
@@ -52,16 +54,19 @@ curl http://localhost:8000/health
 robyn-ml-api/
 ├── app/
 │   ├── api/              # API endpoints (routers)
-│   │   ├── __init__.py
 │   │   └── health.py     # Health check endpoint example
 │   ├── core/             # Core framework components
 │   │   ├── lifespan.py   # Event-driven lifecycle management
 │   │   ├── logger.py     # Structured logging configuration
-│   │   ├── router.py     # Custom router with validation
+│   │   ├── router.py     # Custom router with body/file parsing
 │   │   └── settings.py   # Pydantic settings management
 │   ├── events/           # Lifespan events
 │   │   └── process_pool.py  # ProcessPoolExecutor example
+│   ├── middlewares/      # Middleware system
+│   │   ├── base.py       # BaseMiddleware + MiddlewareHandler
+│   │   └── files.py      # OpenAPI file upload patching
 │   ├── models/           # Pydantic request/response models
+│   │   └── core.py       # UploadFile and core types
 │   ├── operation/        # Business logic utilities
 │   ├── providers/        # External services/model loaders
 │   └── main.py           # Application entrypoint
@@ -287,6 +292,136 @@ class ProcessPoolEvent(BaseEvent[ProcessPoolExecutor]):
     async def shutdown(self, instance: ProcessPoolExecutor) -> None:
         """Shutdown the process pool."""
         instance.shutdown(wait=True)
+```
+
+---
+
+## Middlewares
+
+### Middleware Architecture
+
+The `BaseMiddleware` provides an abstract interface for creating reusable middlewares with `before` and `after` hooks:
+
+```python
+# app/middlewares/timing.py
+"""Request timing middleware."""
+
+import time
+from robyn import Request, Response
+
+from app.middlewares.base import BaseMiddleware
+
+
+class TimingMiddleware(BaseMiddleware):
+    """Logs request duration."""
+
+    def __init__(self) -> None:
+        # Apply to all endpoints (empty frozenset)
+        super().__init__(endpoints=None)
+        self._start_times: dict[str, float] = {}
+
+    def before(self, request: Request) -> Request:
+        """Record start time."""
+        self._start_times[request.url.path] = time.time()
+        return request
+
+    def after(self, response: Response) -> Response:
+        """Log duration."""
+        # Calculate and log timing
+        return response
+```
+
+**Key features:**
+- Must implement at least one of `before()` or `after()` (enforced at class definition)
+- `endpoints` parameter filters which routes the middleware applies to
+- Empty/None `endpoints` applies to all registered routes
+
+### Register Middlewares
+
+```python
+# app/main.py
+from app.middlewares.base import MiddlewareHandler
+from app.middlewares.timing import TimingMiddleware
+from app.middlewares.files import FileUploadOpenAPIMiddleware
+
+app = Robyn(__file__)
+
+# Create handler and register middlewares (chainable)
+middlewares = MiddlewareHandler(app)
+middlewares.register(TimingMiddleware())
+middlewares.register(FileUploadOpenAPIMiddleware())
+
+# Or chain: middlewares.register(A()).register(B()).register(C())
+```
+
+### Built-in Middlewares
+
+**`FileUploadOpenAPIMiddleware`** - Automatically patches OpenAPI spec for file upload endpoints:
+
+```python
+from app.middlewares.files import FileUploadOpenAPIMiddleware
+
+middlewares.register(FileUploadOpenAPIMiddleware())
+```
+
+This middleware detects endpoints using `UploadFile` and updates `/openapi.json` to show proper `multipart/form-data` upload UI in Swagger.
+
+---
+
+## File Uploads
+
+### UploadFile Type
+
+Use `UploadFile` for typed file upload handling with automatic injection:
+
+```python
+# app/api/uploads.py
+from app.core.router import Router
+from app.models.core import UploadFile
+
+router = Router(__file__, prefix="/files")
+
+
+@router.post("/upload")
+async def upload_file(files: UploadFile):
+    """Handle file uploads - request object is NOT required."""
+    results = []
+    for filename, data in files:
+        results.append({
+            "name": filename,
+            "size": len(data),
+        })
+    return {"uploaded": results}
+```
+
+**Key features:**
+- **No `request` parameter required** - The router automatically injects it internally
+- Files are available as `dict[str, bytes]` via iteration or `.get(name)`
+- OpenAPI docs automatically show file upload UI (via `FileUploadOpenAPIMiddleware`)
+
+### UploadFile API
+
+```python
+class UploadFile:
+    files: dict[str, bytes]  # Raw file data
+
+    def __bool__(self) -> bool:           # Check if any files
+    def __iter__(self):                   # Iterate (name, bytes) pairs
+    def get(self, name: str) -> bytes | None:  # Get file by field name
+    def keys(self) -> list[str]:          # List all field names
+```
+
+### Example with Optional Request
+
+If you need access to headers or other request data, you can still declare it:
+
+```python
+@router.post("/upload-with-auth")
+async def upload_with_auth(request: Request, files: UploadFile):
+    """Access both request and files."""
+    auth = request.headers.get("authorization")
+    # Process files with auth context...
+    return {"files": len(files.files), "authenticated": bool(auth)}
 ```
 
 ---

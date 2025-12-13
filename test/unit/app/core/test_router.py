@@ -1,10 +1,13 @@
 """Tests for custom router with body parsing and response handling."""
 
+import inspect
+
 import pytest
 from pydantic import BaseModel
 from robyn import Response
 
-from app.core.router import BodyType, parse_response, post_parse_body, pre_parse_body
+from app.core.router import BodyType, parse_endpoint_signature, parse_request_body, parse_response
+from app.models.core import UploadFile
 
 
 # -----------------------------------------------------------------------------
@@ -33,13 +36,12 @@ class TestPreParseBody:
         async def handler(body: SampleModel) -> None:
             pass
 
-        import inspect
-
         sig = inspect.signature(handler)
-        result = pre_parse_body(sig)
+        body_config, file_params = parse_endpoint_signature(sig)
 
-        assert "body" in result
-        assert result["body"][0] == BodyType.PYDANTIC
+        assert "body" in body_config
+        assert body_config["body"][0] == BodyType.PYDANTIC
+        assert file_params == set()
 
     def test_dict_annotation(self) -> None:
         """Verify dict annotations are detected as JSONABLE."""
@@ -47,13 +49,12 @@ class TestPreParseBody:
         async def handler(data: dict) -> None:
             pass
 
-        import inspect
-
         sig = inspect.signature(handler)
-        result = pre_parse_body(sig)
+        body_config, file_params = parse_endpoint_signature(sig)
 
-        assert "data" in result
-        assert result["data"][0] == BodyType.JSONABLE
+        assert "data" in body_config
+        assert body_config["data"][0] == BodyType.JSONABLE
+        assert file_params == set()
 
     def test_body_named_parameter(self) -> None:
         """Verify parameter named 'body' is detected as JSONABLE."""
@@ -61,13 +62,12 @@ class TestPreParseBody:
         async def handler(body) -> None:
             pass
 
-        import inspect
-
         sig = inspect.signature(handler)
-        result = pre_parse_body(sig)
+        body_config, file_params = parse_endpoint_signature(sig)
 
-        assert "body" in result
-        assert result["body"][0] == BodyType.JSONABLE
+        assert "body" in body_config
+        assert body_config["body"][0] == BodyType.JSONABLE
+        assert file_params == set()
 
     def test_no_body_parameters(self) -> None:
         """Verify handlers without body params return empty dict."""
@@ -75,12 +75,23 @@ class TestPreParseBody:
         async def handler(request, global_dependencies) -> None:
             pass
 
-        import inspect
+        sig = inspect.signature(handler)
+        body_config, file_params = parse_endpoint_signature(sig)
+
+        assert body_config == {}
+        assert file_params == set()
+
+    def test_upload_file_annotation(self) -> None:
+        """Verify UploadFile annotations are detected as file params."""
+
+        async def handler(files: UploadFile) -> None:
+            pass
 
         sig = inspect.signature(handler)
-        result = pre_parse_body(sig)
+        body_config, file_params = parse_endpoint_signature(sig)
 
-        assert result == {}
+        assert body_config == {}
+        assert "files" in file_params
 
 
 # -----------------------------------------------------------------------------
@@ -96,7 +107,7 @@ class TestPostParseBody:
         body_config = {"body": (BodyType.PYDANTIC, SampleModel)}
         kwargs = {"body": '{"name": "test", "value": 42}'}
 
-        error = post_parse_body(body_config, kwargs)
+        error = parse_request_body(body_config, kwargs)
 
         assert error is None
         assert isinstance(kwargs["body"], SampleModel)
@@ -108,7 +119,7 @@ class TestPostParseBody:
         body_config = {"body": (BodyType.PYDANTIC, SampleModel)}
         kwargs = {"body": '{"name": "test"}'}  # missing 'value'
 
-        error = post_parse_body(body_config, kwargs)
+        error = parse_request_body(body_config, kwargs)
 
         assert isinstance(error, Response)
         assert error.status_code == 422
@@ -118,7 +129,7 @@ class TestPostParseBody:
         body_config = {"data": (BodyType.JSONABLE, None)}
         kwargs = {"data": '{"key": "value"}'}
 
-        error = post_parse_body(body_config, kwargs)
+        error = parse_request_body(body_config, kwargs)
 
         assert error is None
         assert kwargs["data"] == {"key": "value"}
@@ -128,7 +139,7 @@ class TestPostParseBody:
         body_config = {"data": (BodyType.JSONABLE, None)}
         kwargs = {"data": "not valid json"}
 
-        error = post_parse_body(body_config, kwargs)
+        error = parse_request_body(body_config, kwargs)
 
         assert isinstance(error, Response)
         assert error.status_code == 422
@@ -139,7 +150,7 @@ class TestPostParseBody:
         original = b"raw bytes"
         kwargs = {"data": original}
 
-        error = post_parse_body(body_config, kwargs)
+        error = parse_request_body(body_config, kwargs)
 
         assert error is None
         assert kwargs["data"] == original
@@ -149,7 +160,7 @@ class TestPostParseBody:
         body_config = {"body": (BodyType.PYDANTIC, SampleModel)}
         kwargs = {}  # body not in kwargs
 
-        error = post_parse_body(body_config, kwargs)
+        error = parse_request_body(body_config, kwargs)
 
         assert error is None
 
@@ -208,3 +219,34 @@ class TestParseResponse:
         """Verify parse_response always returns a Response."""
         result = parse_response(input_val)
         assert isinstance(result, expected_type)
+
+
+# -----------------------------------------------------------------------------
+# UploadFile Model Tests
+# -----------------------------------------------------------------------------
+
+
+class TestUploadFileModel:
+    """Tests for UploadFile model."""
+
+    def test_empty_upload_file(self) -> None:
+        """Verify empty UploadFile is falsy."""
+        upload = UploadFile()
+        assert not upload
+
+    def test_upload_file_with_data(self) -> None:
+        """Verify UploadFile with data is truthy."""
+        upload = UploadFile(files={"file": b"content"})
+        assert upload
+
+    def test_upload_file_iteration(self) -> None:
+        """Verify UploadFile can be iterated."""
+        upload = UploadFile(files={"a": b"1", "b": b"2"})
+        items = list(upload)
+        assert len(items) == 2
+
+    def test_upload_file_get(self) -> None:
+        """Verify UploadFile.get() works."""
+        upload = UploadFile(files={"file": b"content"})
+        assert upload.get("file") == b"content"
+        assert upload.get("missing") is None
