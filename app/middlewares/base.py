@@ -12,10 +12,10 @@ from app.core.logger import LogIcon, logger
 class BaseMiddleware(ABC):
     """Abstract base class for middlewares with before/after hooks."""
 
-    endpoints: frozenset[str]
+    endpoints: frozenset[str] = frozenset()
 
-    def __init__(self, endpoints: frozenset[str] | list[str] | None = None) -> None:
-        self.endpoints = frozenset(endpoints) if endpoints else frozenset()
+    def __init__(self, app: Robyn) -> None:
+        self.app = app
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -43,11 +43,12 @@ class MiddlewareHandler:
         self._app = app
         self._middlewares: list[BaseMiddleware] = []
 
-    def register(self, middleware: BaseMiddleware) -> "MiddlewareHandler":
-        """Register a middleware. Returns self for chaining."""
+    def register(self, middleware_cls: type[BaseMiddleware]) -> "MiddlewareHandler":
+        """Register a middleware class. Instantiates with app. Returns self for chaining."""
+        middleware = middleware_cls(self._app)
         self._middlewares.append(middleware)
         self._apply_middleware(middleware)
-        logger.info(f"Registered middleware: {middleware.__class__.__name__}", icon=LogIcon.ADAPTER)
+        logger.info(f"Registered middleware: {middleware_cls.__name__}", icon=LogIcon.ADAPTER)
         return self
 
     def _apply_middleware(self, middleware: BaseMiddleware) -> None:
@@ -78,4 +79,3 @@ class MiddlewareHandler:
         @self._app.after_request(endpoint)
         def after_wrapper(response: Response) -> Response:
             return handler(response)
-

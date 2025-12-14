@@ -1,7 +1,7 @@
 """File upload middleware for OpenAPI multipart/form-data patching."""
 
 import orjson
-from robyn import Request, Response
+from robyn import Request, Response, Robyn
 
 from app.core.router import FILE_UPLOAD_ENDPOINTS
 from app.middlewares.base import BaseMiddleware
@@ -10,8 +10,10 @@ from app.middlewares.base import BaseMiddleware
 class FileUploadOpenAPIMiddleware(BaseMiddleware):
     """Patches OpenAPI responses to use multipart/form-data for file upload endpoints."""
 
-    def __init__(self) -> None:
-        super().__init__(endpoints=frozenset(["/openapi.json"]))
+    endpoints = frozenset(["/openapi.json"])
+
+    def __init__(self, app: Robyn) -> None:
+        super().__init__(app)
 
     def before(self, request: Request) -> Request:
         return request

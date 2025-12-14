@@ -2,25 +2,28 @@
 
 from robyn import Robyn
 
-from app.api.health import router as health_router
-from app.core.lifespan import create_lifespan
 from app.core.logger import logger
-from app.core.router import Router
 from app.core.settings import settings as st
+from app.core.router import Router
+from app.api.health import router as health_router
+from app.models.core import UploadFile
+from app.core.lifespan import create_lifespan
+from app.events.process_pool import ProcessPoolEvent
 from app.middlewares.base import MiddlewareHandler
 from app.middlewares.files import FileUploadOpenAPIMiddleware
-from app.models.core import UploadFile
 
 app = Robyn(__file__)
 
 # Lifespan events
 lifespan = create_lifespan(app)
+lifespan.register(ProcessPoolEvent)
+
 app.startup_handler(lifespan.startup)
 app.shutdown_handler(lifespan.shutdown)
 
 # Middlewares
 middlewares = MiddlewareHandler(app)
-middlewares.register(FileUploadOpenAPIMiddleware())
+middlewares.register(FileUploadOpenAPIMiddleware)
 
 # Routers
 app.include_router(health_router)

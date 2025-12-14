@@ -307,7 +307,7 @@ The `BaseMiddleware` provides an abstract interface for creating reusable middle
 """Request timing middleware."""
 
 import time
-from robyn import Request, Response
+from robyn import Request, Response, Robyn
 
 from app.middlewares.base import BaseMiddleware
 
@@ -315,9 +315,10 @@ from app.middlewares.base import BaseMiddleware
 class TimingMiddleware(BaseMiddleware):
     """Logs request duration."""
 
-    def __init__(self) -> None:
-        # Apply to all endpoints (empty frozenset)
-        super().__init__(endpoints=None)
+    endpoints = frozenset()  # Empty = apply to all routes
+
+    def __init__(self, app: Robyn) -> None:
+        super().__init__(app)
         self._start_times: dict[str, float] = {}
 
     def before(self, request: Request) -> Request:
@@ -332,11 +333,14 @@ class TimingMiddleware(BaseMiddleware):
 ```
 
 **Key features:**
+- Receives `app: Robyn` in constructor (access to state, routes, etc.)
 - Must implement at least one of `before()` or `after()` (enforced at class definition)
-- `endpoints` parameter filters which routes the middleware applies to
-- Empty/None `endpoints` applies to all registered routes
+- Class attribute `endpoints` filters which routes the middleware applies to
+- Empty `endpoints` applies to all registered routes
 
 ### Register Middlewares
+
+Pass the **class** (not instance) - the handler instantiates it with `app`:
 
 ```python
 # app/main.py
@@ -346,12 +350,12 @@ from app.middlewares.files import FileUploadOpenAPIMiddleware
 
 app = Robyn(__file__)
 
-# Create handler and register middlewares (chainable)
+# Create handler and register middleware classes (chainable)
 middlewares = MiddlewareHandler(app)
-middlewares.register(TimingMiddleware())
-middlewares.register(FileUploadOpenAPIMiddleware())
+middlewares.register(TimingMiddleware)
+middlewares.register(FileUploadOpenAPIMiddleware)
 
-# Or chain: middlewares.register(A()).register(B()).register(C())
+# Or chain: middlewares.register(A).register(B).register(C)
 ```
 
 ### Built-in Middlewares
@@ -361,7 +365,7 @@ middlewares.register(FileUploadOpenAPIMiddleware())
 ```python
 from app.middlewares.files import FileUploadOpenAPIMiddleware
 
-middlewares.register(FileUploadOpenAPIMiddleware())
+middlewares.register(FileUploadOpenAPIMiddleware)  # Pass class, not instance
 ```
 
 This middleware detects endpoints using `UploadFile` and updates `/openapi.json` to show proper `multipart/form-data` upload UI in Swagger.
