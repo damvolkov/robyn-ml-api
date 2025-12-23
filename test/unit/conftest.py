@@ -1,6 +1,7 @@
 """Test fixtures for robyn-ml-api unit tests."""
 
 import json
+from collections.abc import Generator
 from dataclasses import dataclass, field
 
 import pytest
@@ -59,7 +60,7 @@ def test_state() -> State:
 
 
 @pytest.fixture
-def global_dependencies(test_state: State) -> dict:
+def global_dependencies(test_state: State) -> Generator[dict, None, None]:
     """Setup global dependencies for tests."""
     yield {"state": test_state}
     test_state.clear()

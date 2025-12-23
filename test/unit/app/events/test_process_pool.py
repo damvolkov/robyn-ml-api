@@ -71,6 +71,6 @@ def test_create_process_pool_respects_max_workers(workers: int) -> None:
     """Verify max_workers parameter is respected."""
     pool = create_process_pool(max_workers=workers)
     try:
-        assert pool._max_workers == workers
+        assert pool._max_workers == workers  # type: ignore[unresolved-attribute]
     finally:
         pool.shutdown(wait=True)

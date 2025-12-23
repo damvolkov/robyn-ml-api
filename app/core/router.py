@@ -13,7 +13,6 @@ from robyn.types import Body
 
 from app.models.core import BodyType, UploadFile
 
-
 FILE_UPLOAD_ENDPOINTS: set[str] = set()
 
 
@@ -153,9 +152,8 @@ def _create_method_wrapper(original_method: Callable, router_prefix: str = "") -
                 if error := parse_request_body(body_config, h_kwargs):
                     return error
 
-                if file_params:
-                    if error := parse_request_files(file_params, request, h_kwargs):
-                        return error
+                if file_params and (error := parse_request_files(file_params, request, h_kwargs)):
+                    return error
 
                 # Pass request to handler only if it declared it
                 if has_request_param:

@@ -29,7 +29,7 @@ export PYTHONPATH := $(CURDIR)
 
 COMPOSE_FILE := compose.yml
 
-.PHONY: help install sync lock lint format test dev prod run docker-build docker-up docker-down docker-test clean
+.PHONY: help install sync lock lint format typecheck test dev prod run docker-build docker-up docker-down docker-test clean
 
 # -----------------------------------------------------------------------------
 # Help
@@ -50,6 +50,7 @@ help:
 	@echo "$(BOLD)Quality:$(RESET)"
 	@echo "  $(GREEN)make lint$(RESET)         Run ruff linter with auto-fix"
 	@echo "  $(GREEN)make format$(RESET)       Format code with ruff"
+	@echo "  $(GREEN)make typecheck$(RESET)    Run ty type checker"
 	@echo "  $(GREEN)make test$(RESET)         Run unit tests"
 	@echo ""
 	@echo "$(BOLD)Docker:$(RESET)"
@@ -106,6 +107,11 @@ format:
 	@echo "$(GREEN)=== Formatting code ===$(RESET)"
 	@uv run ruff format $(PACKAGE)
 	@echo "$(GREEN)=== Format complete ===$(RESET)"
+
+typecheck:
+	@echo "$(GREEN)=== Running type checker ===$(RESET)"
+	@uv run ty check
+	@echo "$(GREEN)=== Type check complete ===$(RESET)"
 
 test:
 	@echo "$(GREEN)=== Running unit tests ===$(RESET)"

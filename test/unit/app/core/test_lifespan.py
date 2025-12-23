@@ -223,7 +223,7 @@ class TestLifespan:
         await lifespan.startup()
         await lifespan.shutdown()
 
-        assert "test" not in lifespan.state
+        assert lifespan.state is not None and "test" not in lifespan.state
 
     async def test_shutdown_handles_no_state(self) -> None:
         """Verify shutdown handles case when state is None."""

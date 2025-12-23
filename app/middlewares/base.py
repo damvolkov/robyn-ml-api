@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any
 
 from robyn import Request, Response, Robyn
 
@@ -65,7 +64,7 @@ class MiddlewareHandler:
 
     def _get_all_routes(self) -> frozenset[str]:
         """Get all registered routes from the app."""
-        routes = self._app.get_all_routes()
+        routes = self._app.get_all_routes()  # type: ignore[possibly-missing-attribute]
         return frozenset(route[1] for route in routes)
 
     def _register_before(self, endpoint: str, handler: Callable) -> None:

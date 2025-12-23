@@ -186,8 +186,9 @@ class TestParseResponse:
 
         assert result.status_code == 200
         assert result.headers["content-type"] == "application/json"
-        assert "test" in result.description
-        assert "123" in result.description
+        description = str(result.description)
+        assert "test" in description
+        assert "123" in description
 
     def test_dict_to_json(self) -> None:
         """Verify dicts are serialized to JSON."""
@@ -196,8 +197,9 @@ class TestParseResponse:
 
         assert result.status_code == 200
         assert result.headers["content-type"] == "application/json"
-        assert "key" in result.description
-        assert "value" in result.description
+        description = str(result.description)
+        assert "key" in description
+        assert "value" in description
 
     def test_other_to_string(self) -> None:
         """Verify other types are converted to string."""

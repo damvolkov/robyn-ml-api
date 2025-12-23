@@ -2,15 +2,15 @@
 
 from robyn import Robyn
 
-from app.core.logger import logger
-from app.core.settings import settings as st
-from app.core.router import Router
 from app.api.health import router as health_router
-from app.models.core import UploadFile
 from app.core.lifespan import create_lifespan
+from app.core.logger import logger
+from app.core.router import Router
+from app.core.settings import settings as st
 from app.events.process_pool import ProcessPoolEvent
 from app.middlewares.base import MiddlewareHandler
 from app.middlewares.files import FileUploadOpenAPIMiddleware
+from app.models.core import UploadFile
 
 app = Robyn(__file__)
 

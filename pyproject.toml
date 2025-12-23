@@ -57,6 +57,7 @@ dev = [
     "python-dotenv>=1.1.0",
     "ruff>=0.14.0",
     "pre-commit>=4.4.0",
+    "ty>=0.0.5",
 ]
 
 [tool.hatch.version]
@@ -77,7 +78,7 @@ installer = "uv"
 dev = "python -m app.main"
 lint = "ruff check --fix ."
 format = "ruff format ."
-typecheck = "python -m pyright"
+typecheck = "ty check"
 test = "pytest test/unit -v"
 
 [tool.pytest.ini_options]
@@ -97,3 +98,11 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.ty.environment]
+python-version = "3.12"
+root = ["./app"]
+
+[tool.ty.rules]
+possibly-unresolved-reference = "error"
+unresolved-import = "error"
